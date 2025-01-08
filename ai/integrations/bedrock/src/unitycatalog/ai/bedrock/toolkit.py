@@ -1,5 +1,4 @@
-
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 import boto3
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -16,7 +15,7 @@ class BedrockSession:
     def __init__(self, agent_id: str, agent_alias_id: str):
         """
         Initialize a Bedrock session.
-        
+
         Args:
             agent_id: The ID of the Bedrock agent
             agent_alias_id: The alias ID of the Bedrock agent
@@ -24,14 +23,14 @@ class BedrockSession:
         self.agent_id = agent_id
         self.agent_alias_id = agent_alias_id
         self.client = boto3.client('bedrock-agent-runtime')
-        
+
     def invoke_agent(self, input_text: str):
         """
         Invoke the Bedrock agent with the given input text.
-        
+
         Args:
             input_text: The text input to send to the agent
-            
+
         Returns:
             The agent's response
         """
@@ -53,7 +52,7 @@ class BedrockTool(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Union[str, Dict[str, Any]]]:
         """Convert the tool to a dictionary format for Bedrock."""
         return {
             "name": self.name,
@@ -82,11 +81,11 @@ class UCFunctionToolkit(BaseModel):
     def create_session(self, agent_id: str, agent_alias_id: str) -> BedrockSession:
         """
         Creates a new Bedrock session for interacting with an agent.
-        
+
         Args:
             agent_id: The ID of the Bedrock agent
             agent_alias_id: The alias ID of the Bedrock agent
-            
+
         Returns:
             BedrockSession: A new session object
         """
@@ -116,18 +115,18 @@ class UCFunctionToolkit(BaseModel):
     ) -> BedrockTool:
         """
         Converts a Unity Catalog function to a Bedrock tool.
-        
+
         Args:
             client: The Unity Catalog function client
             function_name: The name of the function to convert
             function_info: Optional pre-fetched function information
-            
+
         Returns:
             BedrockTool: The converted tool
         """
         if function_name and function_info:
             raise ValueError("Only one of function_name or function_info should be provided.")
-        
+
         client = validate_or_set_default_client(client)
         if function_name:
             function_info = client.get_function(function_name)
@@ -157,10 +156,10 @@ class UCFunctionToolkit(BaseModel):
     def get_tool(self, name: str) -> Optional[BedrockTool]:
         """
         Gets a specific tool by name.
-        
+
         Args:
             name: The name of the tool to retrieve
-            
+
         Returns:
             Optional[BedrockTool]: The tool if found, None otherwise
         """
