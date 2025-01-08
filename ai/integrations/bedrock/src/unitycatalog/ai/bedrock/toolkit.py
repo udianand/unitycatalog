@@ -12,12 +12,29 @@ from unitycatalog.ai.core.utils.function_processing_utils import (
 )
 
 class BedrockSession:
+    """Manages a session with AWS Bedrock agent runtime."""
     def __init__(self, agent_id: str, agent_alias_id: str):
+        """
+        Initialize a Bedrock session.
+        
+        Args:
+            agent_id: The ID of the Bedrock agent
+            agent_alias_id: The alias ID of the Bedrock agent
+        """
         self.agent_id = agent_id
         self.agent_alias_id = agent_alias_id
         self.client = boto3.client('bedrock-agent-runtime')
         
     def invoke_agent(self, input_text: str):
+        """
+        Invoke the Bedrock agent with the given input text.
+        
+        Args:
+            input_text: The text input to send to the agent
+            
+        Returns:
+            The agent's response
+        """
         return self.client.invoke_agent(
             agentId=self.agent_id,
             agentAliasId=self.agent_alias_id,
@@ -25,7 +42,7 @@ class BedrockSession:
         )
 
 class BedrockTool(BaseModel):
-    """Model representing a Bedrock tool."""
+    """Model representing a Unity Catalog function as a Bedrock tool."""
     name: str = Field(description="The name of the function.")
     description: str = Field(description="A brief description of the function's purpose.")
     parameters: Dict[str, Any] = Field(description="The parameters schema required by the function.")
@@ -37,6 +54,7 @@ class BedrockTool(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert the tool to a dictionary format for Bedrock."""
         return {
             "name": self.name,
             "description": self.description,
@@ -62,11 +80,24 @@ class UCFunctionToolkit(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def create_session(self, agent_id: str, agent_alias_id: str) -> BedrockSession:
-        """Creates a new Bedrock session."""
+        """
+        Creates a new Bedrock session for interacting with an agent.
+        
+        Args:
+            agent_id: The ID of the Bedrock agent
+            agent_alias_id: The alias ID of the Bedrock agent
+            
+        Returns:
+            BedrockSession: A new session object
+        """
         return BedrockSession(agent_id=agent_id, agent_alias_id=agent_alias_id)
 
     @model_validator(mode="after")
     def validate_toolkit(self) -> "UCFunctionToolkit":
+        """
+        Validates and processes the toolkit configuration after initialization.
+        Converts UC functions to Bedrock tools.
+        """
         self.client = validate_or_set_default_client(self.client)
         self.tools_dict = process_function_names(
             function_names=self.function_names,
@@ -83,6 +114,17 @@ class UCFunctionToolkit(BaseModel):
         function_name: Optional[str] = None,
         function_info: Optional[Any] = None,
     ) -> BedrockTool:
+        """
+        Converts a Unity Catalog function to a Bedrock tool.
+        
+        Args:
+            client: The Unity Catalog function client
+            function_name: The name of the function to convert
+            function_info: Optional pre-fetched function information
+            
+        Returns:
+            BedrockTool: The converted tool
+        """
         if function_name and function_info:
             raise ValueError("Only one of function_name or function_info should be provided.")
         
@@ -113,5 +155,13 @@ class UCFunctionToolkit(BaseModel):
         return list(self.tools_dict.values())
 
     def get_tool(self, name: str) -> Optional[BedrockTool]:
-        """Gets a specific tool by name."""
+        """
+        Gets a specific tool by name.
+        
+        Args:
+            name: The name of the tool to retrieve
+            
+        Returns:
+            Optional[BedrockTool]: The tool if found, None otherwise
+        """
         return self.tools_dict.get(name)
