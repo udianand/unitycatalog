@@ -1,0 +1,186 @@
+response = client.invoke_agent(
+    agentAliasId='string',
+    agentId='string',
+    bedrockModelConfigurations={
+        'performanceConfig': {
+            'latency': 'standard'|'optimized'
+        }
+    },
+    enableTrace=True|False,
+    endSession=True|False,
+    inputText='string',
+    memoryId='string',
+    sessionId='string',
+    sessionState={
+        'conversationHistory': {
+            'messages': [
+                {
+                    'content': [
+                        {
+                            'text': 'string'
+                        },
+                    ],
+                    'role': 'user'|'assistant'
+                },
+            ]
+        },
+        'files': [
+            {
+                'name': 'string',
+                'source': {
+                    'byteContent': {
+                        'data': b'bytes',
+                        'mediaType': 'string'
+                    },
+                    's3Location': {
+                        'uri': 'string'
+                    },
+                    'sourceType': 'S3'|'BYTE_CONTENT'
+                },
+                'useCase': 'CODE_INTERPRETER'|'CHAT'
+            },
+        ],
+        'invocationId': 'string',
+        'knowledgeBaseConfigurations': [
+            {
+                'knowledgeBaseId': 'string',
+                'retrievalConfiguration': {
+                    'vectorSearchConfiguration': {
+                        'filter': {
+                            'andAll': [
+                                {'... recursive ...'},
+                            ],
+                            'equals': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'greaterThan': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'greaterThanOrEquals': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'in': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'lessThan': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'lessThanOrEquals': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'listContains': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'notEquals': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'notIn': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'orAll': [
+                                {'... recursive ...'},
+                            ],
+                            'startsWith': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            },
+                            'stringContains': {
+                                'key': 'string',
+                                'value': {...}|[...]|123|123.4|'string'|True|None
+                            }
+                        },
+                        'implicitFilterConfiguration': {
+                            'metadataAttributes': [
+                                {
+                                    'description': 'string',
+                                    'key': 'string',
+                                    'type': 'STRING'|'NUMBER'|'BOOLEAN'|'STRING_LIST'
+                                },
+                            ],
+                            'modelArn': 'string'
+                        },
+                        'numberOfResults': 123,
+                        'overrideSearchType': 'HYBRID'|'SEMANTIC',
+                        'rerankingConfiguration': {
+                            'bedrockRerankingConfiguration': {
+                                'metadataConfiguration': {
+                                    'selectionMode': 'SELECTIVE'|'ALL',
+                                    'selectiveModeConfiguration': {
+                                        'fieldsToExclude': [
+                                            {
+                                                'fieldName': 'string'
+                                            },
+                                        ],
+                                        'fieldsToInclude': [
+                                            {
+                                                'fieldName': 'string'
+                                            },
+                                        ]
+                                    }
+                                },
+                                'modelConfiguration': {
+                                    'additionalModelRequestFields': {
+                                        'string': {...}|[...]|123|123.4|'string'|True|None
+                                    },
+                                    'modelArn': 'string'
+                                },
+                                'numberOfRerankedResults': 123
+                            },
+                            'type': 'BEDROCK_RERANKING_MODEL'
+                        }
+                    }
+                }
+            },
+        ],
+        'promptSessionAttributes': {
+            'string': 'string'
+        },
+        'returnControlInvocationResults': [
+            {
+                'apiResult': {
+                    'actionGroup': 'string',
+                    'agentId': 'string',
+                    'apiPath': 'string',
+                    'confirmationState': 'CONFIRM'|'DENY',
+                    'httpMethod': 'string',
+                    'httpStatusCode': 123,
+                    'responseBody': {
+                        'string': {
+                            'body': 'string'
+                        }
+                    },
+                    'responseState': 'FAILURE'|'REPROMPT'
+                },
+                'functionResult': {
+                    'actionGroup': 'string',
+                    'agentId': 'string',
+                    'confirmationState': 'CONFIRM'|'DENY',
+                    'function': 'string',
+                    'responseBody': {
+                        'string': {
+                            'body': 'string'
+                        }
+                    },
+                    'responseState': 'FAILURE'|'REPROMPT'
+                }
+            },
+        ],
+        'sessionAttributes': {
+            'string': 'string'
+        }
+    },
+    sourceArn='string',
+    streamingConfigurations={
+        'applyGuardrailInterval': 123,
+        'streamFinalResponse': True|False
+    }
+)
