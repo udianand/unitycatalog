@@ -47,6 +47,14 @@ dist/
 *.egg-info/
 Pipfile
 
+# Replit specific files
+.replit
+.replit.nix
+replit.nix
+.config/
+.upm/
+.cache/
+
 .replit
 .replit.nix
 replit.nix
