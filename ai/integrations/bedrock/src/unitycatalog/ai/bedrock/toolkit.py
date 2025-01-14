@@ -24,20 +24,75 @@ class BedrockSession:
         self.agent_alias_id = agent_alias_id
         self.client = boto3.client('bedrock-agent-runtime')
 
-    def invoke_agent(self, input_text: str):
+    def invoke_agent(
+        self,
+        input_text: str,
+        enable_trace: bool = None,
+        session_id: str = None
+    ):
         """
         Invoke the Bedrock agent with the given input text.
 
         Args:
             input_text: The text input to send to the agent
+            enable_trace: Enable detailed trace information about request handling
+            session_id: Unique ID for the session
 
         Returns:
             The agent's response
         """
-        return self.client.invoke_agent(
+        params = {
+            'agentId': self.agent_id,
+            'agentAliasId': self.agent_alias_id,
+            'inputText': input_text
+        }
+        
+        if enable_trace is not None:
+            params['enableTrace'] = enable_trace
+        if session_id is not None:
+            params['sessionId'] = session_id
+            
+        return self.client.invoke_agent(**params)
+
+    def start_session(
+        self,
+        alias_id: str = None,
+        session_ttl: int = None
+    ):
+        """
+        Start a new session with the Bedrock agent.
+
+        Args:
+            alias_id: The alias ID to use. Defaults to the one set in constructor
+            session_ttl: Time-to-live duration for the session in seconds
+
+        Returns:
+            Response from the start session API
+        """
+        params = {
+            'agentId': self.agent_id,
+            'agentAliasId': alias_id or self.agent_alias_id
+        }
+        
+        if session_ttl is not None:
+            params['sessionTtl'] = session_ttl
+            
+        return self.client.start_agent_session(**params)
+
+    def end_session(self, session_id: str):
+        """
+        End an existing session with the Bedrock agent.
+
+        Args:
+            session_id: ID of the session to end
+
+        Returns:
+            Response from the end session API
+        """
+        return self.client.delete_agent_session(
             agentId=self.agent_id,
             agentAliasId=self.agent_alias_id,
-            inputText=input_text
+            sessionId=session_id
         )
 
 class BedrockTool(BaseModel):
