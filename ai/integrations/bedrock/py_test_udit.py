@@ -40,14 +40,14 @@ def test_weather_function():
         
         print("Creating catalog...")
         try:
-            uc_client.create_catalog(name=CATALOG, comment="Catalog for AI functions")
+            uc_client.uc.create_catalog(name=CATALOG, comment="Catalog for AI functions")
         except Exception as e:
             if "already exists" not in str(e):
                 raise e
             
         print("Creating schema...")
         try:
-            uc_client.create_schema(catalog_name=CATALOG, name=SCHEMA, comment="Schema for AI functions")
+            uc_client.uc.create_schema(catalog_name=CATALOG, name=SCHEMA, comment="Schema for AI functions")
         except Exception as e:
             if "already exists" not in str(e):
                 raise e
