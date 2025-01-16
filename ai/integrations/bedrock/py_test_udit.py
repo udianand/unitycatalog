@@ -1,4 +1,3 @@
-
 from unitycatalog.ai.core.client import UnitycatalogFunctionClient
 from unitycatalog.client import ApiClient, Configuration
 from unitycatalog.ai.bedrock.toolkit import UCFunctionToolkit
@@ -24,3 +23,21 @@ session = toolkit.create_session(
 # Now you can invoke the agent
 response = session.invoke_agent("What's the weather in London?")
 print(response)
+
+def bedrock_test_function(name: str) -> str:
+    """Test function for AWS Bedrock integration.
+
+    Args:
+        name (str): The name to be included in the greeting message.
+
+    Raises:
+        Exception: If there is an error during the function execution.
+
+    Returns:
+        str: A greeting message containing the provided name.
+    """
+    try:
+        # Fetch from Databricks SQL Warehouse based UC function execution 
+        return "hello: " + name
+    except Exception as e:
+        raise Exception(f"Error occurred: {e}")
