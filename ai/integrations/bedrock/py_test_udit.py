@@ -34,10 +34,24 @@ def test_weather_function():
             # Mock implementation for testing
             return "23°C"
 
-        # Create function in Unity Catalog
+        # Create catalog and schema first
         CATALOG = "AICatalog"
         SCHEMA = "AISchema"
         
+        print("Creating catalog...")
+        try:
+            uc_client.create_catalog(name=CATALOG, comment="Catalog for AI functions")
+        except Exception as e:
+            if "already exists" not in str(e):
+                raise e
+            
+        print("Creating schema...")
+        try:
+            uc_client.create_schema(catalog_name=CATALOG, name=SCHEMA, comment="Schema for AI functions")
+        except Exception as e:
+            if "already exists" not in str(e):
+                raise e
+            
         print("Creating function in Unity Catalog...")
         uc_client.create_python_function(
             func=location_weather_in_c,
