@@ -43,7 +43,7 @@ def test_weather_function():
         try:
             uc_client.uc.create_catalog(name=CATALOG, comment="Catalog for AI functions")
             # Check if catalog was created
-            catalogs = uc_client.list_catalogs()
+            catalogs = uc_client.uc.catalogs_client.list_catalogs()
             print(f"Available catalogs: {[c.name for c in catalogs.catalogs]}")
             if CATALOG in [c.name for c in catalogs.catalogs]:
                 print(f"Catalog '{CATALOG}' was created successfully")
