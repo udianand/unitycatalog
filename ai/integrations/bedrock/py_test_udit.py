@@ -19,9 +19,35 @@ def test_weather_function():
     try:
         # Initialize Unity Catalog client
         uc_client = setup_uc_client()
+        
+        # Define the weather function
+        def location_weather_in_c(location: str) -> str:
+            """
+            Get the current weather in celsius for a given location.
+            
+            Args:
+                location (str): The location to get weather for
+                
+            Returns:
+                str: The temperature in celsius
+            """
+            # Mock implementation for testing
+            return "23°C"
+
+        # Create function in Unity Catalog
+        CATALOG = "AICatalog"
+        SCHEMA = "AISchema"
+        
+        print("Creating function in Unity Catalog...")
+        uc_client.create_python_function(
+            func=location_weather_in_c,
+            catalog=CATALOG,
+            schema=SCHEMA,
+            replace=True
+        )
 
         # Create toolkit with weather function
-        function_name = "AICatalog.AISchema.location_weather_in_c"
+        function_name = f"{CATALOG}.{SCHEMA}.location_weather_in_c"
         toolkit = UCFunctionToolkit(function_names=[function_name],
                                   client=uc_client)
 
