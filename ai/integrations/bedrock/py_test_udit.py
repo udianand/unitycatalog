@@ -10,34 +10,16 @@ config.access_token = "dummy-token"  # Add proper auth token if needed
 api_client = ApiClient(configuration=config)
 client = UnitycatalogFunctionClient(api_client=api_client)
 
-# Create toolkit with the weather function
-function_name = "AICatalog.AISchema.location_weather_in_c"
+# Create toolkit with your UC function
+function_name = "AICatalog.AISchema.location_weather_in_c"  # Replace with your function name
 toolkit = UCFunctionToolkit(function_names=[function_name], client=client)
 
-# Create a session with your Bedrock agent 
+# Create a Bedrock session with your agent IDs
 session = toolkit.create_session(
-    agent_id="your_agent_id",
-    agent_alias_id="your_alias_id"
+    agent_id="your_bedrock_agent_id",  # Replace with your Bedrock agent ID
+    agent_alias_id="your_bedrock_alias_id"  # Replace with your Bedrock agent alias ID
 )
 
-# Now you can invoke the agent
+# Invoke the agent with your prompt
 response = session.invoke_agent("What's the weather in London?")
 print(response)
-
-def bedrock_test_function(name: str) -> str:
-    """Test function for AWS Bedrock integration.
-
-    Args:
-        name (str): The name to be included in the greeting message.
-
-    Raises:
-        Exception: If there is an error during the function execution.
-
-    Returns:
-        str: A greeting message containing the provided name.
-    """
-    try:
-        # Fetch from Databricks SQL Warehouse based UC function execution 
-        return "hello: " + name
-    except Exception as e:
-        raise Exception(f"Error occurred: {e}")
