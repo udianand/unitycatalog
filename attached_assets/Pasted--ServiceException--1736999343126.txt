@@ -1,0 +1,124 @@
+---------------------------------------------------------------------------
+ServiceException                          Traceback (most recent call last)
+Cell In[10], line 3
+      1 # Create toolkit with the weather function
+      2 function_name = f"AICatalog.AISchema.location_weather_in_c"
+----> 3 toolkit = UCFunctionToolkit(function_names=[function_name], client=client)
+
+    [... skipping hidden 1 frame]
+
+File ~/Documents/Dev/unitycatalog/ai/integrations/bedrock/src/unitycatalog/ai/bedrock/toolkit.py:156, in UCFunctionToolkit.validate_toolkit(self)
+    151 """
+    152 Validates and processes the toolkit configuration after initialization.
+    153 Converts UC functions to Bedrock tools.
+    154 """
+    155 self.client = validate_or_set_default_client(self.client)
+--> 156 self.tools_dict = process_function_names(
+    157     function_names=self.function_names,
+    158     tools_dict=self.tools_dict,
+    159     client=self.client,
+    160     uc_function_to_tool_func=self.uc_function_to_bedrock_tool,
+    161 )
+    162 return self
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/unitycatalog/ai/core/utils/function_processing_utils.py:191, in process_function_names(function_names, tools_dict, client, uc_function_to_tool_func, **kwargs)
+    189                     break
+    190         else:
+--> 191             tools_dict[name] = uc_function_to_tool_func(
+    192                 function_name=name, client=client, **kwargs
+    193             )
+    194 return tools_dict
+
+File ~/Documents/Dev/unitycatalog/ai/integrations/bedrock/src/unitycatalog/ai/bedrock/toolkit.py:187, in UCFunctionToolkit.uc_function_to_bedrock_tool(client, function_name, function_info)
+    185 client = validate_or_set_default_client(client)
+    186 if function_name:
+--> 187     function_info = client.get_function(function_name)
+    188 elif function_info:
+    189     function_name = function_info.full_name
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/unitycatalog/ai/core/client.py:107, in syncify_method.<locals>.wrapper(self, *args, **kwargs)
+    103     return asyncio.run(async_method(*args, **kwargs))
+    104 else:
+    105     # NB: Jupyter kernels use a persistent asyncio loop to handle the active REPL
+    106     # context for which we can access the running loop to handle our future.
+--> 107     return loop.run_until_complete(async_method(*args, **kwargs))
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/nest_asyncio.py:98, in _patch_loop.<locals>.run_until_complete(self, future)
+     95 if not f.done():
+     96     raise RuntimeError(
+     97         'Event loop stopped before Future completed.')
+---> 98 return f.result()
+
+File /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/futures.py:203, in Future.result(self)
+    201 self.__log_traceback = False
+    202 if self._exception is not None:
+--> 203     raise self._exception.with_traceback(self._exception_tb)
+    204 return self._result
+
+File /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:314, in Task.__step_run_and_handle_result(***failed resolving arguments***)
+    310 try:
+    311     if exc is None:
+    312         # We use the `send` method directly, because coroutines
+    313         # don't have `__iter__` and `__next__` methods.
+--> 314         result = coro.send(None)
+    315     else:
+    316         result = coro.throw(exc)
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/unitycatalog/ai/core/client.py:612, in UnitycatalogFunctionClient.get_function_async(self, function_name, timeout)
+    599 """
+    600 Retrieve a function by its full name asynchronously.
+    601 
+   (...)
+    608     The FunctionInfo object representing the function.
+    609 """
+    611 try:
+--> 612     return await self.uc.functions_client.get_function(
+    613         function_name, _request_timeout=timeout
+    614     )
+    615 except NotFoundException as e:
+    616     _logger.warning(
+    617         f"Failed to retrieve function {function_name} from Unity Catalog, the function may not exist. "
+    618         f"Exception: {e}"
+    619     )
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/pydantic/_internal/_validate_call.py:33, in update_wrapper_attributes.<locals>.wrapper_function(*args, **kwargs)
+     31 @functools.wraps(wrapped)
+     32 async def wrapper_function(*args, **kwargs):  # type: ignore
+---> 33     return await wrapper(*args, **kwargs)
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/unitycatalog/client/api/functions_api.py:632, in FunctionsApi.get_function(self, name, _request_timeout, _request_auth, _content_type, _headers, _host_index)
+    627 response_data = await self.api_client.call_api(
+    628     *_param,
+    629     _request_timeout=_request_timeout
+    630 )
+    631 await response_data.read()
+--> 632 return self.api_client.response_deserialize(
+    633     response_data=response_data,
+    634     response_types_map=_response_types_map,
+    635 ).data
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/unitycatalog/client/api_client.py:326, in ApiClient.response_deserialize(self, response_data, response_types_map)
+    324 finally:
+    325     if not 200 <= response_data.status <= 299:
+--> 326         raise ApiException.from_response(
+    327             http_resp=response_data,
+    328             body=response_text,
+    329             data=return_data,
+    330         )
+    332 return ApiResponse(
+    333     status_code = response_data.status,
+    334     data = return_data,
+    335     headers = response_data.getheaders(),
+    336     raw_data = response_data.data
+    337 )
+
+File ~/Documents/Dev/unitycatalog/.venv/lib/python3.12/site-packages/unitycatalog/client/exceptions.py:154, in ApiException.from_response(cls, http_resp, body, data)
+    151     raise NotFoundException(http_resp=http_resp, body=body, data=data)
+    153 if 500 <= http_resp.status <= 599:
+--> 154     raise ServiceException(http_resp=http_resp, body=body, data=data)
+    155 raise ApiException(http_resp=http_resp, body=body, data=data)
+
+ServiceException: (500)
+Reason: Internal Server Error
+HTTP response headers: <CIMultiDictProxy('Content-Type': 'application/json', 'Content-Length': '5622', 'Server': 'Armeria/1.28.4', 'Date': 'Wed, 15 Jan 2025 21:34:09 GMT')>
+HTTP response body: {"error_code":"INTERNAL","details":[{"reason":"INTERNAL","metadata":{},"@type":"google.rpc.ErrorInfo"}],"stack_trace":"[java.base/java.util.Objects.requireNonNull(Objects.java:235), com.linecorp.armeria.common.HttpResponse.ofJson(HttpResponse.java:661), com.linecorp.armeria.common.HttpResponse.ofJson(HttpResponse.java:618), com.linecorp.armeria.common.HttpResponse.ofJson(HttpResponse.java:603), io.unitycatalog.server.service.FunctionService.getFunction(FunctionService.java:99), com.linecorp.armeria.internal.server.annotation.AnnotatedService.invoke(AnnotatedService.java:382), com.linecorp.armeria.internal.server.annotation.AnnotatedService.serve0(AnnotatedService.java:296), com.linecorp.armeria.internal.server.annotation.AnnotatedService.serve(AnnotatedService.java:272), com.linecorp.armeria.internal.server.annotation.AnnotatedService.serve(AnnotatedService.java:78), com.linecorp.armeria.internal.server.annotation.AnnotatedService$ExceptionHandlingHttpService.serve(AnnotatedService.java:536), com.linecorp.armeria.server.HttpServerHandler.serve0(HttpServerHandler.java:463), com.linecorp.armeria.server.HttpServerHandler.handleRequest(HttpServerHandler.java:398), com.linecorp.armeria.server.HttpServerHandler.channelRead(HttpServerHandler.java:281), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412), com.linecorp.armeria.server.Http1RequestDecoder.channelRead(Http1RequestDecoder.java:282), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412), com.linecorp.armeria.server.HttpServerUpgradeHandler.channelRead(HttpServerUpgradeHandler.java:227), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412), io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.fireChannelRead(CombinedChannelDuplexHandler.java:436), io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346), io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:318), io.netty.channel.CombinedChannelDuplexHandler.channelRead(CombinedChannelDuplexHandler.java:251), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412), io.netty.handler.codec.ByteToMessageDecoder.handlerRemoved(ByteToMessageDecoder.java:266), io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:537), io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469), io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412), io.netty.handler.logging.LoggingHandler.channelRead(LoggingHandler.java:280), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412), io.netty.handler.flush.FlushConsolidationHandler.channelRead(FlushConsolidationHandler.java:152), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412), io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1407), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440), io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420), io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918), io.netty.channel.epoll.AbstractEpollStreamChannel$EpollStreamUnsafe.epollInReady(AbstractEpollStreamChannel.java:799), io.netty.channel.epoll.EpollEventLoop.processReady(EpollEventLoop.java:501), io.netty.channel.epoll.EpollEventLoop.run(EpollEventLoop.java:399), io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994), io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74), io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30), java.base/java.lang.Thread.run(Thread.java:840)]","message":"content"}
