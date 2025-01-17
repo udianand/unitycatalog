@@ -54,6 +54,7 @@ replit.nix
 .config/
 .upm/
 .cache/
+py_test_udit.py
 
 .replit
 .replit.nix
