@@ -28,7 +28,8 @@ class BedrockSession:
         self,
         input_text: str,
         enable_trace: bool = None,
-        session_id: str = None
+        session_id: str = None,
+        session_state: dict = None
     ):
         """
         Invoke the Bedrock agent with the given input text.
@@ -37,6 +38,7 @@ class BedrockSession:
             input_text: The text input to send to the agent
             enable_trace: Enable detailed trace information about request handling
             session_id: Unique ID for the session
+            session_state: Optional session state for the agent
 
         Returns:
             The agent's response
@@ -51,6 +53,8 @@ class BedrockSession:
             params['enableTrace'] = enable_trace
         if session_id is not None:
             params['sessionId'] = session_id
+        if session_state is not None:
+            params['sessionState'] = session_state
             
         return self.client.invoke_agent(**params)
 
