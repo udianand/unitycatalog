@@ -1,0 +1,59 @@
+from typing import List
+from pyspark.sql import Row
+from pyspark.sql.types import (
+    ArrayType,
+    StructType,
+    StructField,
+    StringType,
+    TimestampType,
+)
+from pyspark.sql.functions import pandas_udf, PandasUDFType, col, lit, when, concat
+import pandas as pd
+
+# Define the schema for the aggregated result
+device_schema = ArrayType(
+    StructType([
+        StructField("device_id", StringType(), True),
+        StructField("last_seen", TimestampType(), True),
+        StructField("deviceModel", StringType(), True),
+        StructField("timezone", StringType(), True),
+    ])
+)
+
+@pandas_udf(device_schema)
+def top_20_devices_udaf(device_id: pd.Series,
+                        last_seen: pd.Series,
+                        deviceIsp: pd.Series,
+                        deviceModel: pd.Series,
+                        networkLocationState: pd.Series) -> List[Row]:
+    """
+    UDAF to compute the top 20 devices based on the last_seen timestamp.
+
+    Args:
+        device_id (pd.Series): Series of device IDs for the group.
+        last_seen (pd.Series): Series of timestamps for the group.
+
+    Returns:
+        List[Row]: List of up to 20 Row objects sorted by last_seen (descending).
+    """
+    # Create a DataFrame from the grouped columns
+    devices_df = pd.DataFrame({'device_id': device_id,
+                               'last_seen': last_seen,
+                               'deviceIsp': deviceIsp,
+                               'deviceModel': deviceModel,
+                               'networkLocationState': networkLocationState})
+
+    # Sort by last_seen descending and take the top 20
+    top_20 = devices_df.sort_values('last_seen', ascending=False).head(20)
+    # Convert back to a list of Row objects
+    return [Row(device_id=row.device_id,
+                last_seen=row.last_seen,
+                deviceIsp=row.deviceIsp,
+                deviceModel=row.deviceModel,
+                networkLocationState=row.networkLocationState) for row in top_20.itertuples()]
+2:02
+Calling the UDAF:
+result_df = (df.groupBy(entity_clean_name)
+               .agg( 
+                 top_20_devices_udaf( col("device"), col("transaction_date"), col("isp"), col("model"), col("state") ).alias("devices") ) )
+(edited)
