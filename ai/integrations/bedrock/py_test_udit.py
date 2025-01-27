@@ -1,4 +1,3 @@
-
 from unitycatalog.ai.core.client import UnitycatalogFunctionClient
 from unitycatalog.client import ApiClient, Configuration
 from unitycatalog.ai.bedrock.toolkit import UCFunctionToolkit
@@ -11,7 +10,6 @@ def setup_uc_client():
     """Set up Unity Catalog client"""
     config = Configuration()
     config.host = "http://0.0.0.0:8080/api/2.1/unity-catalog"
-    config.access_token = os.getenv("UC_TOKEN", "dummy-token")
     api_client = ApiClient(configuration=config)
     return UnitycatalogFunctionClient(api_client=api_client)
 
@@ -19,47 +17,45 @@ def test_weather_function():
     """Test the weather function with Bedrock integration"""
     try:
         # Initialize Unity Catalog client
-        uc_client = setup_uc_client()
-        
-        # Define the weather function
-        def location_weather_in_c(location: str) -> str:
-            """
-            Get the current weather in celsius for a given location.
-            
-            Args:
-                location (str): The location to get weather for
-                
-            Returns:
-                str: The temperature in celsius
-            """
-            # Mock implementation for testing
-            return "23°C"
+        client = setup_uc_client()
 
-        # Create catalog and schema first
+        # Define the weather function
+        def location_weather_in_c(location_id: str, fetch_date: str) -> str:
+            """Test function for AWS Bedrock integration.
+
+            Args:
+                location_id (str): The name to be included in the greeting message.
+                fetch_date (str): The date with the location
+
+            Returns:
+                str: Weather result.
+            """
+            try:
+                # Mock implementation - returns fixed temperature
+                return "23"
+            except Exception as e:
+                raise Exception(f"Error occurred: {e}")
+
+        # Create catalog and schema
         CATALOG = "AICatalog"
         SCHEMA = "AISchema"
-        
+
         print("Creating catalog...")
         try:
-            uc_client.uc.create_catalog(name=CATALOG, comment="Catalog for AI functions")
-            # Check if catalog was created
-            catalogs = uc_client.uc.catalogs_client.list_catalogs()
-            print(f"Available catalogs: {[c.name for c in catalogs.catalogs]}")
-            if CATALOG in [c.name for c in catalogs.catalogs]:
-                print(f"Catalog '{CATALOG}' was created successfully")
+            client.uc.create_catalog(name=CATALOG, comment="Catalog for AI functions")
         except Exception as e:
             if "already exists" not in str(e):
                 raise e
-            
+
         print("Creating schema...")
         try:
-            uc_client.uc.create_schema(catalog_name=CATALOG, name=SCHEMA, comment="Schema for AI functions")
+            client.uc.create_schema(catalog_name=CATALOG, name=SCHEMA, comment="Schema for AI functions")
         except Exception as e:
             if "already exists" not in str(e):
                 raise e
-            
+
         print("Creating function in Unity Catalog...")
-        uc_client.create_python_function(
+        client.create_python_function(
             func=location_weather_in_c,
             catalog=CATALOG,
             schema=SCHEMA,
@@ -68,71 +64,35 @@ def test_weather_function():
 
         # Create toolkit with weather function
         function_name = f"{CATALOG}.{SCHEMA}.location_weather_in_c"
-        toolkit = UCFunctionToolkit(function_names=[function_name],
-                                  client=uc_client)
+        toolkit = UCFunctionToolkit(function_names=[function_name], client=client)
 
         # Bedrock agent configuration
-        agent_id = os.getenv("BEDROCK_AGENT_ID", "your_agent_id")
-        agent_alias_id = os.getenv("BEDROCK_ALIAS_ID", "your_alias_id")
+        agent_id = "AP5RQUVNTU"  # Replace with your agent ID
+        agent_alias_id = "O6EXN8DJVZ"  # Replace with your alias ID
 
         # Create a session with Bedrock agent
-        session = toolkit.create_session(agent_id=agent_id,
-                                      agent_alias_id=agent_alias_id)
-
-        # Generate unique session ID
+        session = toolkit.create_session(agent_id=agent_id, agent_alias_id=agent_alias_id)
         session_id = str(uuid.uuid1())
 
-        # Test cases with different cities
-        test_cities = ["London", "New York", "Tokyo", "Paris"]
-        
-        for city in test_cities:
-            print(f"\nTesting weather query for {city}")
-            
-            # Invoke agent with a weather question
-            response = session.invoke_agent(
-                input_text=f"What's the weather in {city}?",
-                enable_trace=True,
-                session_id=session_id)
+        # Test the weather query
+        print("\nTesting weather query")
+        response = session.invoke_agent(
+            input_text="What is the weather for location 1234 and date of 2024-11-19",
+            enable_trace=True,
+            session_id=session_id,
+            uc_client=client
+        )
 
-            # Process the agent's response
-            for event in response.get('completion', []):
-                if 'returnControl' in event:
-                    # Handle function invocation
-                    function_input = event["returnControl"]["invocationInputs"][0][
-                        "functionInvocationInput"]
-                    print(f"Function to call: {function_input['function']}")
-                    print(f"Parameters: {function_input['parameters']}")
+        print("Response from agent:")
+        pprint(response.raw_response)
 
-                    # Simulate weather result (replace with actual API call)
-                    weather_result = "23"  # Example temperature
+        if response.requires_tool_execution:
+            print("\nTool calls required:")
+            pprint(response.tool_calls)
 
-                    # Send result back to agent
-                    final_response = session.invoke_agent(
-                        input_text="",
-                        session_id=session_id,
-                        enable_trace=True,
-                        session_state={
-                            'invocationId':
-                            event["returnControl"]["invocationId"],
-                            'returnControlInvocationResults': [{
-                                'functionResult': {
-                                    'actionGroup': function_input["actionGroup"],
-                                    'function': function_input["function"],
-                                    'confirmationState': 'CONFIRM',
-                                    'responseBody': {
-                                        "TEXT": {
-                                            'body':
-                                            f"weather_in_centigrade: {weather_result}"
-                                        }
-                                    }
-                                }
-                            }]
-                        })
-
-                    # Print final response
-                    print("Agent Response:")
-                    for final_event in final_response.get('completion', []):
-                        print(f"  {final_event}")
+        if response.final_response:
+            print("\nFinal response:")
+            print(response.final_response)
 
     except Exception as e:
         print(f"Error occurred: {e}")
