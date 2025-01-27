@@ -29,8 +29,9 @@ class BedrockSession:
         input_text: str,
         enable_trace: bool = None,
         session_id: str = None,
-        session_state: dict = None
-    ):
+        session_state: dict = None,
+        uc_client: Optional[BaseFunctionClient] = None
+    ) -> BedrockToolResponse:
         """
         Invoke the Bedrock agent with the given input text.
 
@@ -39,9 +40,10 @@ class BedrockSession:
             enable_trace: Enable detailed trace information about request handling
             session_id: Unique ID for the session
             session_state: Optional session state for the agent
+            uc_client: Optional Unity Catalog client for executing functions
 
         Returns:
-            The agent's response
+            BedrockToolResponse containing the agent's response and handled tool calls
         """
         params = {
             'agentId': self.agent_id,
@@ -56,7 +58,25 @@ class BedrockSession:
         if session_state is not None:
             params['sessionState'] = session_state
             
-        return self.client.invoke_agent(**params)
+        response = self.client.invoke_agent(**params)
+        tool_calls = extract_tool_calls(response)
+        
+        if tool_calls and uc_client:
+            tool_results = execute_tool_calls(tool_calls, uc_client)
+            if tool_results:
+                # Make follow-up call with tool results
+                session_state = generate_tool_call_session_state(tool_results[0], tool_calls[0])
+                return self.invoke_agent(
+                    input_text="",
+                    session_id=session_id,
+                    enable_trace=enable_trace,
+                    session_state=session_state
+                )
+                
+        return BedrockToolResponse(
+            raw_response=response,
+            tool_calls=tool_calls
+        )
 
     def start_session(
         self,
