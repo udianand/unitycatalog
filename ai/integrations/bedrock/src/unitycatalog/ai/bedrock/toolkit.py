@@ -10,8 +10,10 @@ from unitycatalog.ai.core.utils.function_processing_utils import (
     process_function_names,
 )
 
+
 class BedrockSession:
     """Manages a session with AWS Bedrock agent runtime."""
+
     def __init__(self, agent_id: str, agent_alias_id: str):
         """
         Initialize a Bedrock session.
@@ -25,12 +27,12 @@ class BedrockSession:
         self.client = boto3.client('bedrock-agent-runtime')
 
     def invoke_agent(
-        self,
-        input_text: str,
-        enable_trace: bool = None,
-        session_id: str = None,
-        session_state: dict = None,
-        uc_client: Optional[BaseFunctionClient] = None
+            self,
+            input_text: str,
+            enable_trace: bool = None,
+            session_id: str = None,
+            session_state: dict = None,
+            uc_client: Optional[BaseFunctionClient] = None
     ) -> BedrockToolResponse:
         """
         Invoke the Bedrock agent with the given input text.
@@ -50,39 +52,32 @@ class BedrockSession:
             'agentAliasId': self.agent_alias_id,
             'inputText': input_text
         }
-        
+
         if enable_trace is not None:
             params['enableTrace'] = enable_trace
         if session_id is not None:
             params['sessionId'] = session_id
         if session_state is not None:
             params['sessionState'] = session_state
-            
+
         response = self.client.invoke_agent(**params)
         tool_calls = extract_tool_calls(response)
-        
+
         if tool_calls and uc_client:
             tool_results = execute_tool_calls(tool_calls, uc_client)
             if tool_results:
                 # Make follow-up call with tool results
-                session_state = generate_tool_call_session_state(tool_results[0], tool_calls[0])
-                return self.invoke_agent(
-                    input_text="",
-                    session_id=session_id,
-                    enable_trace=enable_trace,
-                    session_state=session_state
-                )
-                
-        return BedrockToolResponse(
-            raw_response=response,
-            tool_calls=tool_calls
-        )
+                session_state = generate_tool_call_session_state(
+                    tool_results[0], tool_calls[0])
+                return self.invoke_agent(input_text="",
+                                         session_id=session_id,
+                                         enable_trace=enable_trace,
+                                         session_state=session_state)
 
-    def start_session(
-        self,
-        alias_id: str = None,
-        session_ttl: int = None
-    ):
+        return BedrockToolResponse(raw_response=response,
+                                   tool_calls=tool_calls)
+
+    def start_session(self, alias_id: str = None, session_ttl: int = None):
         """
         Start a new session with the Bedrock agent.
 
@@ -97,10 +92,10 @@ class BedrockSession:
             'agentId': self.agent_id,
             'agentAliasId': alias_id or self.agent_alias_id
         }
-        
+
         if session_ttl is not None:
             params['sessionTtl'] = session_ttl
-            
+
         return self.client.start_agent_session(**params)
 
     def end_session(self, session_id: str):
@@ -116,18 +111,20 @@ class BedrockSession:
         return self.client.delete_agent_session(
             agentId=self.agent_id,
             agentAliasId=self.agent_alias_id,
-            sessionId=session_id
-        )
+            sessionId=session_id)
+
 
 class BedrockTool(BaseModel):
     """Model representing a Unity Catalog function as a Bedrock tool."""
     name: str = Field(description="The name of the function.")
-    description: str = Field(description="A brief description of the function's purpose.")
-    parameters: Dict[str, Any] = Field(description="The parameters schema required by the function.")
+    description: str = Field(
+        description="A brief description of the function's purpose.")
+    parameters: Dict[str, Any] = Field(
+        description="The parameters schema required by the function.")
     requireConfirmation: str = Field(
         default="ENABLED",
-        description="Whether confirmation is required before executing the function."
-    )
+        description=
+        "Whether confirmation is required before executing the function.")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -140,24 +137,26 @@ class BedrockTool(BaseModel):
             "requireConfirmation": self.requireConfirmation
         }
 
+
 class UCFunctionToolkit(BaseModel):
     """A toolkit for managing Unity Catalog functions and converting them into Bedrock tools."""
 
     function_names: List[str] = Field(
         default_factory=list,
-        description="List of function names in 'catalog.schema.function' format."
-    )
+        description=
+        "List of function names in 'catalog.schema.function' format.")
     tools_dict: Dict[str, BedrockTool] = Field(
         default_factory=dict,
-        description="Dictionary mapping function names to their corresponding Bedrock tools."
+        description=
+        "Dictionary mapping function names to their corresponding Bedrock tools."
     )
     client: Optional[BaseFunctionClient] = Field(
-        default=None, description="The client for managing functions."
-    )
+        default=None, description="The client for managing functions.")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def create_session(self, agent_id: str, agent_alias_id: str) -> BedrockSession:
+    def create_session(self, agent_id: str,
+                       agent_alias_id: str) -> BedrockSession:
         """
         Creates a new Bedrock session for interacting with an agent.
 
@@ -204,7 +203,9 @@ class UCFunctionToolkit(BaseModel):
             BedrockTool: The converted tool
         """
         if function_name and function_info:
-            raise ValueError("Only one of function_name or function_info should be provided.")
+            raise ValueError(
+                "Only one of function_name or function_info should be provided."
+            )
 
         client = validate_or_set_default_client(client)
         if function_name:
@@ -212,13 +213,17 @@ class UCFunctionToolkit(BaseModel):
         elif function_info:
             function_name = function_info.full_name
         else:
-            raise ValueError("Either function_name or function_info should be provided.")
+            raise ValueError(
+                "Either function_name or function_info should be provided.")
 
         fn_schema = generate_function_input_params_schema(function_info)
         parameters = {
-            "type": "object",
-            "properties": fn_schema.pydantic_model.model_json_schema().get("properties", {}),
-            "required": fn_schema.pydantic_model.model_json_schema().get("required", []),
+            "type":
+            "object",
+            "properties":
+            fn_schema.pydantic_model.model_json_schema().get("properties", {}),
+            "required":
+            fn_schema.pydantic_model.model_json_schema().get("required", []),
         }
 
         return BedrockTool(
