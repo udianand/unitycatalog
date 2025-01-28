@@ -32,7 +32,8 @@ class BedrockSession:
             enable_trace: bool = None,
             session_id: str = None,
             session_state: dict = None,
-            uc_client: Optional[BaseFunctionClient] = None
+            uc_client: Optional[BaseFunctionClient] = None,
+            stream: bool = False
     ) -> BedrockToolResponse:
         """
         Invoke the Bedrock agent with the given input text.
@@ -43,6 +44,7 @@ class BedrockSession:
             session_id: Unique ID for the session
             session_state: Optional session state for the agent
             uc_client: Optional Unity Catalog client for executing functions
+            stream: Whether to stream the response
 
         Returns:
             BedrockToolResponse containing the agent's response and handled tool calls
@@ -50,7 +52,7 @@ class BedrockSession:
         params = {
             'agentId': self.agent_id,
             'agentAliasId': self.agent_alias_id,
-            'inputText': input_text
+            'inputText': input_text,
         }
 
         if enable_trace is not None:
@@ -59,6 +61,8 @@ class BedrockSession:
             params['sessionId'] = session_id
         if session_state is not None:
             params['sessionState'] = session_state
+        if stream:
+            params['streaming'] = True
 
         response = self.client.invoke_agent(**params)
         tool_calls = extract_tool_calls(response)
@@ -72,7 +76,8 @@ class BedrockSession:
                 return self.invoke_agent(input_text="",
                                          session_id=session_id,
                                          enable_trace=enable_trace,
-                                         session_state=session_state)
+                                         session_state=session_state,
+                                         stream=stream)
 
         return BedrockToolResponse(raw_response=response,
                                    tool_calls=tool_calls)

@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Union
+
+from typing import Any, Dict, List, Optional, Union, Iterator
 from pydantic import BaseModel, Field
 from unitycatalog.ai.core.base import BaseFunctionClient
 from unitycatalog.ai.core.utils.client_utils import validate_or_set_default_client
@@ -25,6 +26,22 @@ class BedrockToolResponse(BaseModel):
                 if 'chunk' in event:
                     return event['chunk'].get('bytes', b'').decode('utf-8')
         return None
+
+    @property
+    def is_streaming(self) -> bool:
+        """Returns True if the response is a streaming response."""
+        return 'chunk' in str(self.raw_response)
+
+    def get_stream(self) -> Iterator[str]:
+        """Yields chunks from a streaming response."""
+        if not self.is_streaming:
+            return
+
+        for event in self.raw_response.get('completion', []):
+            if 'chunk' in event:
+                chunk = event['chunk'].get('bytes', b'').decode('utf-8')
+                if chunk:
+                    yield chunk
 
 
 def extract_tool_calls(response: Dict[str, Any]) -> List[Dict[str, Any]]:

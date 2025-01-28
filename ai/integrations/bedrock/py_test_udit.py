@@ -1,3 +1,4 @@
+
 from unitycatalog.ai.core.client import UnitycatalogFunctionClient
 from unitycatalog.client import ApiClient, Configuration
 from unitycatalog.ai.bedrock.toolkit import UCFunctionToolkit
@@ -26,17 +27,13 @@ def test_weather_function():
             """Test function for AWS Bedrock integration.
 
             Args:
-                location_id (str): The name to be included in the greeting message.
-                fetch_date (str): The date with the location
+                location_id (str): The location ID for weather lookup
+                fetch_date (str): The date to fetch weather for
 
             Returns:
-                str: Weather result.
+                str: Weather result in Celsius.
             """
-            try:
-                # Mock implementation - returns fixed temperature
-                return "23"
-            except Exception as e:
-                raise Exception(f"Error occurred: {e}")
+            return "23"
 
         # Create catalog and schema
         CATALOG = "AICatalog"
@@ -79,25 +76,22 @@ def test_weather_function():
                                          agent_alias_id=agent_alias_id)
         session_id = str(uuid.uuid1())
 
-        # Test the weather query
-        print("\nTesting weather query")
+        # Test streaming response
+        print("\nTesting streaming response")
         response = session.invoke_agent(
-            input_text=
-            "What is the weather for location 1234 and date of 2024-11-19",
+            input_text="What is the weather for location 1234 and date of 2024-11-19",
             enable_trace=True,
             session_id=session_id,
-            uc_client=client)
+            uc_client=client,
+            stream=True)
 
-        print("Response from agent:")
-        pprint(response.raw_response)
+        print("Streaming chunks:")
+        for chunk in response.get_stream():
+            print(chunk, end='', flush=True)
 
         if response.requires_tool_execution:
-            print("\nTool calls required:")
+            print("\n\nTool calls required:")
             pprint(response.tool_calls)
-
-        if response.final_response:
-            print("\nFinal response:")
-            print(response.final_response)
 
     except Exception as e:
         print(f"Error occurred: {e}")
