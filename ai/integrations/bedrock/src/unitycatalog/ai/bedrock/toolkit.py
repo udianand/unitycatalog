@@ -11,11 +11,18 @@ from unitycatalog.ai.core.utils.function_processing_utils import (
     process_function_names,
 )
 
+import os
+import time
+
+# Setup AWS credentials if available
+boto3.setup_default_session()
+
 class BedrockToolResponse(BaseModel):
     """Class to handle Bedrock agent responses and tool calls."""
     raw_response: Dict[str, Any]
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
     tool_results: List[Dict[str, Any]] = Field(default_factory=list)
+    response_body: Optional[Any] = None
 
     @property
     def requires_tool_execution(self) -> bool:
@@ -68,20 +75,32 @@ def extract_tool_calls(response: Dict[str, Any]) -> List[Dict[str, Any]]:
                     })
     return tool_calls
 
-def execute_tool_calls(tool_calls: List[Dict[str, Any]], 
-                      client: Optional[UnitycatalogFunctionClient] = None) -> List[Dict[str, Any]]:
-    """Execute tool calls using Unity Catalog client."""
-    client = validate_or_set_default_client(client)
+def execute_tool_calls(tool_calls, client):
     results = []
     for tool_call in tool_calls:
-        function_name = "location_weather_in_c"
-        print(f"Tool Call Function Name Local: {function_name}") #Debugging
-        result = client.execute_function(tool_call['function_name'],
-                                       tool_call['parameters'])
-        results.append({
-            'invocation_id': tool_call['invocation_id'],
-            'result': str(result.value)
-        })
+        try:
+            full_function_name = tool_call.get("function_name")
+            print(f"Attempting to execute function: {full_function_name} with parameters: {tool_call.get('parameters')}")
+            
+            # Attempt to retrieve function info explicitly and log it
+            full_function_name_override = 'AICatalog.AISchema.location_weather_in_c'
+            function_info = client.get_function(full_function_name_override)
+            print(f"Retrieved function info Override: {function_info}")
+            
+            result = client.execute_function(
+                full_function_name_override,
+                tool_call['parameters']
+            )
+            results.append({
+                'invocation_id': tool_call['invocation_id'],
+                'result': str(result.value)
+            })
+        except Exception as e:
+            print(f"Error executing tool call for {tool_call}: {e}")
+            results.append({
+                'invocation_id': tool_call['invocation_id'],
+                'error': str(e)
+            })
     return results
 
 def generate_tool_call_session_state(tool_result: Dict[str, Any], 
@@ -139,13 +158,40 @@ class BedrockSession:
         tool_calls = extract_tool_calls(response)
 
         if tool_calls and uc_client:
-            print(f"Tool Results Enter:") #Debugging
+            
+            print(f"Response from invoke agent: {response}") #Debugging
+            print(f"Tool Call Results: {tool_calls}") #Debugging
+            
             tool_results = execute_tool_calls(tool_calls, uc_client)
             print(f"ToolResults: {tool_results}") #Debugging
             if tool_results:
                 session_state = generate_tool_call_session_state(
                     tool_results[0], tool_calls[0])
                 print(f"SessionState: {session_state}") #Debugging
+                
+                if 'returnControlInvocationResults' in session_state:
+                    # Final result obtained; return without re-invoking the agent.
+                    results = session_state.get('returnControlInvocationResults', [])
+                    print(f"Results: {results}") # Debugging
+                    if results:
+                        response_body_obj = results[0].get('functionResult', {}).get('responseBody', {})
+                        print(f"response_body_obj: {response_body_obj}") # Debugging
+                    # Dynamically extract the first key-value pair from the response body
+                        if response_body_obj:
+                            dynamic_key = next(iter(response_body_obj))
+                            result_value = response_body_obj.get(dynamic_key, {}).get('body')
+                            print(f"result value: {result_value}") # Debugging
+                        else:
+                            result_value = None
+                    else:
+                        result_value = None
+                    return BedrockToolResponse(
+                        raw_response=response,
+                        tool_calls=tool_calls,
+                        response_body=result_value  # returns the dynamically extracted value, e.g. '23'
+                    )
+            
+                time.sleep(65) #TODO: Remove this sleep
                 return self.invoke_agent(input_text="",
                                        session_id=session_id,
                                        enable_trace=enable_trace,
