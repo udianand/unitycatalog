@@ -75,16 +75,25 @@ def extract_tool_calls(response: Dict[str, Any]) -> List[Dict[str, Any]]:
                     })
     return tool_calls
 
-def execute_tool_calls(tool_calls, client):
+def execute_tool_calls(tool_calls, client,catalog_name:str,schema_name: str,function_name:str) -> List[Dict[str, Any]]:
     results = []
     for tool_call in tool_calls:
         try:
-            full_function_name = tool_call.get("function_name")
-            print(f"Attempting to execute function: {full_function_name} with parameters: {tool_call.get('parameters')}")
+            #full_function_name = tool_call.get("AISchema.AICatalog.get_weather_in_celsisus") #TODO: Remove this hardcoding
+            
+            #print(f"Attempting to execute function: {full_function_name} with parameters: {tool_call.get('parameters')}")
             
             # Attempt to retrieve function info explicitly and log it
-            full_function_name_override = 'AICatalog.AISchema.location_weather_in_c'
+            full_function_name_override = 'AICatalog.AISchema.get_weather_in_celsisus'
+            
+            '''full_function_name_override = (
+                f"{catalog_name}."
+                f"{schema_name}."
+                f"{function_name}"
+                )'''
+            
             function_info = client.get_function(full_function_name_override)
+            
             print(f"Retrieved function info Override: {function_info}")
             
             result = client.execute_function(
@@ -126,11 +135,18 @@ def generate_tool_call_session_state(tool_result: Dict[str, Any],
 class BedrockSession:
     """Manages a session with AWS Bedrock agent runtime."""
 
-    def __init__(self, agent_id: str, agent_alias_id: str):
+    def __init__(self, agent_id: str, agent_alias_id: str,
+                 catalog_name: str = "AICatalog",
+                 schema_name: str = "AISchema",
+                 function_name: str = "get_weather_in_celsisus",
+                 ):
         """Initialize a Bedrock session."""
         self.agent_id = agent_id
         self.agent_alias_id = agent_alias_id
         self.client = boto3.client('bedrock-agent-runtime')
+        self.catalog_name = catalog_name
+        self.schema_name = schema_name
+        self.function_name = function_name
 
     def invoke_agent(
             self,
@@ -162,7 +178,10 @@ class BedrockSession:
             print(f"Response from invoke agent: {response}") #Debugging
             print(f"Tool Call Results: {tool_calls}") #Debugging
             
-            tool_results = execute_tool_calls(tool_calls, uc_client)
+            tool_results = execute_tool_calls(tool_calls, uc_client,
+                                              catalog_name=self.catalog_name,
+                                              schema_name=self.schema_name,
+                                              function_name=self.function_name)
             print(f"ToolResults: {tool_results}") #Debugging
             if tool_results:
                 session_state = generate_tool_call_session_state(
@@ -195,7 +214,10 @@ class BedrockSession:
                 return self.invoke_agent(input_text="",
                                        session_id=session_id,
                                        enable_trace=enable_trace,
-                                       session_state=session_state)
+                                       session_state=session_state,streaming_configurations={
+                                           'applyGuardrailInterval': 123, # TODO: Test variations
+                                           'streamFinalResponse': True
+                                       })
 
         return BedrockToolResponse(raw_response=response, tool_calls=tool_calls)
 
