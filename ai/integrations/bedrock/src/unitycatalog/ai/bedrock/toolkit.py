@@ -3,6 +3,8 @@ from pprint import pprint
 import boto3
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .utils import extract_tool_calls, execute_tool_calls, generate_tool_call_session_state
+
 from unitycatalog.ai.core.client import UnitycatalogFunctionClient
 from unitycatalog.ai.core.utils.client_utils import validate_or_set_default_client
 from unitycatalog.ai.core.utils.function_processing_utils import (
