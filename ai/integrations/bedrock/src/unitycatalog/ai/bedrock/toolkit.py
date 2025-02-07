@@ -135,10 +135,11 @@ def generate_tool_call_session_state(tool_result: Dict[str, Any],
 class BedrockSession:
     """Manages a session with AWS Bedrock agent runtime."""
 
-    def __init__(self, agent_id: str, agent_alias_id: str,
-                 catalog_name: str = "AICatalog",
-                 schema_name: str = "AISchema",
-                 function_name: str = "get_weather_in_celsisus",
+    def __init__(self, agent_id: str, 
+                 agent_alias_id: str,
+                 catalog_name: str ,
+                 schema_name: str ,
+                 function_name: str,
                  ):
         """Initialize a Bedrock session."""
         self.agent_id = agent_id
@@ -170,9 +171,11 @@ class BedrockSession:
         if session_state is not None:
             params['sessionState'] = session_state
 
-        response = self.client.invoke_agent(**params)
-        tool_calls = extract_tool_calls(response)
-
+        #response = self.client.invoke_agent(**params)
+        #tool_calls = extract_tool_calls(response)
+        #Debugging
+        tool_calls = None
+        
         if tool_calls and uc_client:
             
             print(f"Response from invoke agent: {response}") #Debugging
@@ -248,9 +251,18 @@ class UCFunctionToolkit(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def create_session(self, agent_id: str, agent_alias_id: str) -> BedrockSession:
+    def create_session(self, agent_id: str, 
+                       agent_alias_id: str,
+                       catalog_name: str ,
+                       schema_name: str ,
+                       function_name: str,
+                       ) -> BedrockSession:
         """Creates a new Bedrock session for interacting with an agent."""
-        return BedrockSession(agent_id=agent_id, agent_alias_id=agent_alias_id)
+        return BedrockSession(agent_id=agent_id, 
+                              agent_alias_id=agent_alias_id,
+                              catalog_name=catalog_name,
+                              schema_name=schema_name,
+                              function_name=function_name)
 
     @model_validator(mode="after")
     def validate_toolkit(self) -> "UCFunctionToolkit":
