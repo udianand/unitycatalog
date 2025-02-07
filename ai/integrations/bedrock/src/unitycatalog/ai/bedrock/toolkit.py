@@ -14,7 +14,6 @@ from unitycatalog.ai.core.utils.function_processing_utils import (
 )
 
 import os
-import time
 
 # Setup AWS credentials if available
 boto3.setup_default_session()
