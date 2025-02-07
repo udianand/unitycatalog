@@ -31,13 +31,13 @@ def execute_tool_calls(tool_calls: List[Dict[str, Any]],
     results = []
     for tool_call in tool_calls:
         try:
-            full_function_name_override = 'AICatalog.AISchema.get_weather_in_celsisus'
-            
-            function_info = client.get_function(full_function_name_override)
+            full_function_name = f"{catalog_name}.{schema_name}.{function_name}"
+            print(f"Full Function Name: {full_function_name}") #Debugging
+            function_info = client.get_function(full_function_name)
             print(f"Retrieved function info Override: {function_info}")
             
             result = client.execute_function(
-                full_function_name_override,
+                full_function_name,
                 tool_call['parameters']
             )
             results.append({
@@ -45,7 +45,7 @@ def execute_tool_calls(tool_calls: List[Dict[str, Any]],
                 'result': str(result.value)
             })
         except Exception as e:
-            print(f"Error executing tool call for {tool_call}: {e}")
+            print(f"Error executing tool call for {tool_call}: {e}") #Debugging
             results.append({
                 'invocation_id': tool_call['invocation_id'],
                 'error': str(e)

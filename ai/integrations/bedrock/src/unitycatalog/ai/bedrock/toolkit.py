@@ -13,7 +13,7 @@ from unitycatalog.ai.core.utils.function_processing_utils import (
     process_function_names,
 )
 
-import os
+import time
 
 # Setup AWS credentials if available
 boto3.setup_default_session()
@@ -56,7 +56,6 @@ class BedrockToolResponse(BaseModel):
                 if chunk:
                     yield chunk
 
-# Functions moved to utils.py
 
 class BedrockSession:
     """Manages a session with AWS Bedrock agent runtime."""
@@ -74,7 +73,15 @@ class BedrockSession:
         self.catalog_name = catalog_name
         self.schema_name = schema_name
         self.function_name = function_name
-
+        
+        print(
+            f"Initialized BedrockSession with agent_id: {self.agent_id}, "
+            f"agent_alias_id: {self.agent_alias_id}, "
+            f"catalog_name: {self.catalog_name}",
+            f"schema_name: {self.schema_name}, "
+            f"function_name: {self.function_name}"
+        )  # Debugging
+    
     def invoke_agent(
             self,
             input_text: str,
@@ -97,10 +104,8 @@ class BedrockSession:
         if session_state is not None:
             params['sessionState'] = session_state
 
-        #response = self.client.invoke_agent(**params)
-        #tool_calls = extract_tool_calls(response)
-        #Debugging
-        tool_calls = None
+        response = self.client.invoke_agent(**params)
+        tool_calls = extract_tool_calls(response)
         
         if tool_calls and uc_client:
             
