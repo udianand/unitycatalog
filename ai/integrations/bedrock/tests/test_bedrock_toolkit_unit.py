@@ -16,7 +16,7 @@ class FakeBedrockClient:
     def get_function(self, full_function_name: str) -> Dict[str, Any]:
         # Simulated response with function info.
         return {"full_name": full_function_name, "routine_body": "EXTERNAL"}
-    
+
     class FakeExecutionResult:
         def __init__(self, value):
             self.value = value
