@@ -104,7 +104,9 @@ class BedrockSession:
             session_id: str = None,
             session_state: dict = None,
             streaming_configurations: dict = None,
-            uc_client: Optional[UnitycatalogFunctionClient] = None
+            uc_client: Optional[UnitycatalogFunctionClient] = None,
+            max_retries: int = 5,
+            initial_delay: int = 1
     ) -> BedrockToolResponse:
         """Invoke the Bedrock agent with the given input text."""
         params = {
@@ -122,59 +124,73 @@ class BedrockSession:
         if streaming_configurations is not None:
             params['streamingConfigurations'] = streaming_configurations
 
-         # Invoke the agent
-        logger.debug(f"Invoking the agent with params:{params}") #Debugging
-        response = self.client.invoke_agent(**params)
-        logger.debug(f"Response from invoke agent: {response}") #Debugging
+        retries = 0
+        delay = initial_delay
 
-        extracted_details = extract_response_details(response)
+        while retries < max_retries:
+            try:
+                # Invoke the agent
+                logger.debug(f"Invoking the agent with params:{params}") #Debugging
+                response = self.client.invoke_agent(**params)
+                logger.debug(f"Response from invoke agent: {response}") #Debugging
 
-        tool_calls = []
-        final_response_body = None
-        if 'chunks' in extracted_details and extracted_details["chunks"]:
-            final_response_body = extracted_details['chunks']
-               
-        elif 'tool_calls' in extracted_details and extracted_details['tool_calls']:
-            tool_calls = extracted_details['tool_calls']
+                extracted_details = extract_response_details(response)
 
-            logger.debug(f"Tool Call Results: {tool_calls}") #Debugging
-            if tool_calls and uc_client:
-                # There is a response with UC functions to call.
-                logger.debug(f"Tool Calls: {tool_calls[0]['function_name']}") #Debugging
+                tool_calls = []
+                final_response_body = None
+                if 'chunks' in extracted_details and extracted_details["chunks"]:
+                    final_response_body = extracted_details['chunks']
                 
-                function_name_to_execute = (tool_calls[0]['function_name']).split('__')[1]
-                
-                # Executing the UC functions in the current python environment
-                tool_results = execute_tool_calls(tool_calls, uc_client,
-                                                catalog_name=self.catalog_name,
-                                                schema_name=self.schema_name,
-                                                function_name=function_name_to_execute)
-                logger.debug(f"ToolResults: {tool_results}") #Debugging
-                
-                if tool_results:
-                    # Generate the agent session state for the next invocation with results.
-                    session_state = generate_tool_call_session_state(
-                        tool_results[0], tool_calls[0])
-                    logger.debug(f"SessionState from tool_results: {session_state}") #Debugging
+                elif 'tool_calls' in extracted_details and extracted_details['tool_calls']:
+                    tool_calls = extracted_details['tool_calls']
+
+                    logger.debug(f"Tool Call Results: {tool_calls}") #Debugging
+                    if tool_calls and uc_client:
+                        # There is a response with UC functions to call.
+                        logger.debug(f"Tool Calls: {tool_calls[0]['function_name']}") #Debugging
+                        
+                        function_name_to_execute = (tool_calls[0]['function_name']).split('__')[1]
+                        
+                        # Executing the UC functions in the current python environment
+                        tool_results = execute_tool_calls(tool_calls, uc_client,
+                                                        catalog_name=self.catalog_name,
+                                                        schema_name=self.schema_name,
+                                                        function_name=function_name_to_execute)
+                        logger.debug(f"ToolResults: {tool_results}") #Debugging
+                        
+                        if tool_results:
+                            # Generate the agent session state for the next invocation with results.
+                            session_state = generate_tool_call_session_state(
+                                tool_results[0], tool_calls[0])
+                            logger.debug(f"SessionState from tool_results: {session_state}") #Debugging
+                            
+                            logger.info(f"Sleeping for {delay} seconds before invoking the agent again.")
+                            time.sleep(delay)
+                            delay *= 2  # Exponential backoff
+                            retries += 1
+                            continue
                     
-                    logger.info("Sleeping for 65 seconds before invoking the agent again.")
-                    time.sleep(65) #TODO: Remove this sleep and make this exponential
+                    logger.debug(f"SessionState before invoking agent again: {session_state}")  # Debugging
+                    agent_stream_config = {
+                                               # Bedrock will apply safety checks every second while generating and streaming the output
+                                               'applyGuardrailInterval': 1000, 
+                                               'streamFinalResponse': True
+                                           }
+                    return self.invoke_agent(input_text="",
+                                            session_id=session_id,
+                                            enable_trace=enable_trace,
+                                            session_state=session_state,
+                                            streaming_configurations=agent_stream_config,
+                                            uc_client=uc_client)
+                
+                return BedrockToolResponse(raw_response=response, tool_calls=tool_calls, response_body=final_response_body)
+            except Exception as e:
+                logger.error(f"Invocation failed: {e}. Retrying in {delay} seconds...")
+                time.sleep(delay)
+                delay *= 2  # Exponential backoff
+                retries += 1
 
-                    
-                logger.debug(f"SessionState before invoking agent again: {session_state}")  # Debugging
-                agent_stream_config = {
-                                           # Bedrock will apply safety checks every second while generating and streaming the output
-                                           'applyGuardrailInterval': 1000, 
-                                           'streamFinalResponse': True
-                                       }
-                return self.invoke_agent(input_text="",
-                                        session_id=session_id,
-                                        enable_trace=enable_trace,
-                                        session_state=session_state,
-                                        streaming_configurations=agent_stream_config,
-                                        uc_client=uc_client)
-        
-        return BedrockToolResponse(raw_response=response, tool_calls=tool_calls, response_body=final_response_body)
+        raise Exception("Max retries exceeded. Failed to invoke agent.")
 
 class BedrockTool(BaseModel):
     """Model representing a Unity Catalog function as a Bedrock tool."""
@@ -268,10 +284,10 @@ class UCFunctionToolkit(BaseModel):
         )
 
     @property
-    def tools(self) -> List[BedrockTool]:
+    def tools(self) -> List<BedrockTool]:
         """Gets all available tools."""
         return list(self.tools_dict.values())
 
-    def get_tool(self, name: str) -> Optional[BedrockTool]:
+    def get_tool(self, name: str) -> Optional<BedrockTool]:
         """Gets a specific tool by name."""
         return self.tools_dict.get(name)
